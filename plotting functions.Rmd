@@ -1,0 +1,115 @@
+---
+title: "Network Plots"
+author: "Nick Gauthier"
+date: "November 13, 2015"
+output: html_document
+--keep_md: yes
+---
+Here's a quick overview of some network plotting standards that we might want to display our data with. These look good with my dataset, but I'm sharing this code to see what they look like with yours. 
+ 
+ I'm using an R package called **ggnet**. The idea behind this package is a ggplot2 for network data, so it takes the same aesthetics-based "grammar of graphics" approach. [A great overview of the package and its capabilties can be found here](https://briatte.github.io/ggnet/).
+ 
+ You'll have to install ggnet directly from GitHub, so make sure you have the **devtools** package already installed to do so.
+
+```{r, eval = F}
+devtools::install_github("briatte/ggnet")
+```
+ 
+ Now load all the packages you'll need.
+ 
+```{r, message = F}
+library(ggnet)
+library(ggplot2)
+library(network)
+library(sna)
+library(grid) # ggplot depencies
+```
+
+Import your dataset. NB this code chunk is specific to my dataset, so you'll have to change this part to match yours. The end result should be an adjacency matrix.
+```{r}
+dat <- read.csv('Two Mode-Table.csv', row.names = 1) # import data and use the values in column 1 as row names
+dat[is.na(dat)] <- 0  # binarize the network
+dat <- t(dat) 
+```
+
+
+ggnet requires data in the **network** package's format, so convert it here. Tell R that your network is bipartite and undirected.
+```{r}
+net <- network(dat, matrix.type='bipartite', directed = F)
+```
+
+Here are my examples of ways we might want to display our data. These look good for my particular dataset and on my display but YMMV, so feel free to tweek the code below to get something that works!
+ 
+ Distinguish nodes by color and shape.
+```{r, warning = F, fig.width=12, fig.height=8, message=F}
+ggnet2(net, # the network object to plot
+     color = 'mode', palette = c('actor'='orange1','event'=rgb(153,142,195, max = 255)), #color by mode
+     shape = 'mode', shape.palette = c('actor' = 16, 'event' = 15), # give each mode a different shape
+     size = 'degree', size.zero = T, # size nodes by degree, don't display isolates
+     edge.lty = 3, edge.size = .7, edge.color = 'darkgrey') # tweak the edges
+```
+
+Now greyscale.
+```{r, warning = F, fig.width=12, fig.height=8, message=F}
+ggnet2(net, # the network object to plot
+     color = 'mode', palette = c('actor'='black','event'='grey60'), #color by mode
+     shape = 'mode', shape.palette = c('actor' = 16, 'event' = 15), # give each mode a different shape
+     size = 'degree', size.zero = T, # size nodes by degree, don't display isolates
+     edge.lty = 3, edge.size = .7, edge.color = 'darkgrey') # tweak the edges
+```
+
+Now just color, same shape
+```{r, warning = F, fig.width=12, fig.height=8, message=F}
+ggnet2(net, #label = rownames(dat), # the network object to plot
+     color = 'mode', palette = c('actor'='orange1','event'=rgb(153,142,195, max = 255)), #color by mode
+     size = 'degree', size.zero = T, # size nodes by degree, don't display isolates
+     edge.lty = 3, edge.size = .7, edge.color = 'black', edge.alpha = .5) # tweak the edges
+```
+
+Greyscale.
+```{r, warning = F, fig.width=12, fig.height=8}
+ggnet2(net, # the network object to plot
+     color = 'mode', palette = c('actor'='black','event'='grey60'), #color by mode
+     size = 'degree', size.zero = T, # size nodes by degree, don't display isolates
+     edge.lty = 3, edge.size = .7, edge.color = 'darkgrey') # tweak the edges
+```
+
+
+library(tnet)
+mode2 <- as.tnet(dat, type = 'binary two-mode tnet')
+
+mode1.bin <- projecting_tm(mode2, method = 'binary')
+mode1.sum <- projecting_tm(mode2, method = 'sum')
+mode1.new <- projecting_tm(mode2, method = 'Newman')
+
+
+layout <- ggnet2(mode1.bin, size = degree_w(mode1.bin)[,3], color = 'orange1', edge.size = mode1.bin$w, edge.alpha = .25)
+layout
+
+ggnet2(mode1.sum, size = degree_w(mode1.sum)[,3], color = 'orange1', edge.size = mode1.sum$w, edge.alpha = .25,
+mode = matrix(c(layout$data$x,y=layout$data$y),ncol=2))
+
+ggnet2(mode1.new, size = degree_w(mode1.new)[,3], color = 'orange1', edge.size = mode1.new$w, edge.alpha = .25,
+mode = matrix(c(layout$data$x,y=layout$data$y),ncol=2))
+
+clustering_w(mode1.bin)
+clustering_w(mode1.new)
+clustering_w(mode1.sum)
+
+clust.bin <- cluster_fast_greedy(mode1.bin %>% tnet_igraph)
+clust.new <- cluster_fast_greedy(mode1.new %>% tnet_igraph)
+clust.sum <- cluster_fast_greedy(mode1.sum %>% tnet_igraph)
+
+ggnet2(clust.sum$, size = 'degree', color = 'group', edge.size = mode1.sum$w, edge.alpha = .25, label = rownames(dat), label.size = 4)
+
+ggnet2(mode1.sum, size = 'degree', color = 'orange1', edge.size = mode1.sum$w, edge.alpha = .25, label = rownames(dat), label.size = 4)
+
+
+ggnet2(mode1.new, size = 'degree', color = 'orange1', edge.size = mode1.sum$w, edge.alpha = .25, label = rownames(dat), label.alpha = .8)
+
+ggnet2(mode1.new, size = 'degree', color = 'white', edge.size = mode1.sum$w, edge.alpha = .25, label = rownames(dat))
+
+
+plot(clust.new,mode1.new %>% tnet_igraph, vertex.label = rownames(dat))
+plot(clust.sum,mode1.sum %>% tnet_igraph, vertex.label = rownames(dat), vertex.size = degree_w(mode1.sum)[,3], edge.lty = 3)
+ plot(clust.bin,mode1.bin %>% tnet_igraph, vertex.label = rownames(dat))

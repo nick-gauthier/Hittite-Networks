@@ -1,14 +1,6 @@
----
-title: "Exploratory analysis of Hittite correspondence data"
-author: "Nick Gauthier"
-date: "October 8, 2015"
-output:
-  html_document:
-    highlight: haddock
-    theme: cosmo
-    keep_md: yes
-  pdf_document: default
----
+# Exploratory analysis of Hittite correspondence data
+Nick Gauthier  
+October 8, 2015  
 
 This document presents some exploratory analyses of a dataset coded from a corpus of correspondences between Hittite cities in Bronze Age Anatolia. Data were collected from translations in [Letters from the Hittite Kingdom](https://books.google.com/books/about/Letters_from_the_Hittite_Kingdom.html?id=7B2y1lSFMFAC). 
 
@@ -23,7 +15,8 @@ Let's start by looking at a two mode network developed by recording all place na
   
   After importing this matrix, we create a binary network by setting all null cells to 0.
 
-```{r}
+
+```r
 dat <- read.csv('Two Mode-Table.csv', row.names = 1) # import data and use the values in column 1 as row names
 dat[is.na(dat)] <- 0  # binarize the network
 
@@ -35,7 +28,8 @@ dat <- t(dat) # transpose the matrix if not
 
 Now let's use the [R-package **tnet**](https://cran.r-project.org/web/packages/tnet/tnet.pdf) to treat this matrix as a two-mode network, and **sna** for network plotting and analysis functions. **igraph** must also be installed as it is one of **tnet**'s dependencies. Also load the packages **ggplot2** and **reshape2** for aditional plotting functions and **magrittr** for piping functions to enhance code readability.
 
-```{r message = F}
+
+```r
 library(tnet)
 library(sna)
 library(magrittr)
@@ -45,13 +39,17 @@ library(reshape2)
   
 Plot the raw two-mode data, with the first mode in red and the second in blue.
   
-```{r fig.width=10, fig.height=10}
+
+```r
 gplot(dat, gmode = 'twomode', usearrows = F, displayisolates = F, displaylabels = T,label.cex = .5)
 ```
+
+![](hittite_analysis_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
   
   Let's use **tnet** to create a binary two-mode network.
   
-```{r}
+
+```r
 mode2 <- as.tnet(dat, type = 'binary two-mode tnet')
 ```
 
@@ -61,7 +59,8 @@ Now we can use **tnet** to *project* the two-mode data into a one-mode format us
  
  Let's define a function to create **sna**-compatible adjacency matrices from a **tnet** edgelist, and apply that to projected one-mode networks created using each of the above methods.
 
-```{r}
+
+```r
 sna.format <- function(net){
      net <- as.matrix(net)
      N <- max(c(net[,"i"],net[,"j"]))
@@ -75,33 +74,21 @@ mode1.sum <- projecting_tm(mode2, method = 'sum') %>% sna.format
 mode1.new <- projecting_tm(mode2, method = 'Newman') %>% sna.format
 ```
 
-```{r fig.width=10, fig.height=10, echo = F}
-#save the layout from the first plot to ensure that the other two line up
-plot.coords <- gplot(mode1.bin, gmode = 'graph', displayisolates = T, edge.lwd = 1, edge.col=rgb(0, 0, 0, .25), displaylabels = T, label = row.names(dat),  label.cex = .7, main = 'Binary')
-
-gplot(mode1.sum, gmode = 'graph', displayisolates = F,  edge.lwd = 1, edge.col=matrix(rgb(0, 0, 0, mode1.sum / max(mode1.sum)), nrow = dim(mode1.sum)[1]),displaylabels = T, label = row.names(dat),  label.cex = .7, coord = plot.coords, main = 'Sum')
-
-gplot(mode1.new, gmode = 'graph', displayisolates = F, edge.lwd = 1, edge.col=matrix(rgb(0, 0, 0, mode1.new / max(mode1.new)), nrow = dim(mode1.new)[1]), displaylabels = T, label = row.names(dat),  label.cex = .7, coord = plot.coords, main = 'Newman')
-```
+![](hittite_analysis_files/figure-html/unnamed-chunk-6-1.png)<!-- -->![](hittite_analysis_files/figure-html/unnamed-chunk-6-2.png)<!-- -->![](hittite_analysis_files/figure-html/unnamed-chunk-6-3.png)<!-- -->
 
 
 ##Node Centrality
 ###Degree
 How do the different projection methods impact node-level statistics? Let's look by calculating the degree centrality of the raw two-mode networks and the three projected one-mode networks and comparing their distributions. [Click here for more information on how to think about centrality in two-mode networks](http://toreopsahl.com/tnet/two-mode-networks/node-centrality/).
-```{r}
+
+```r
 degrees <- cbind(degree(mode1.bin, gmode = 'graph'),
                 degree(mode1.sum, gmode = 'graph'),
                 degree(mode1.new, gmode = 'graph'), 
                 degree_tm(mode2)[,2]) %>% melt
 ```
 
-```{r fig.width = 10, fig.height=7, echo = F}
-qplot(x = value,fill = factor(Var2), color = factor(Var2), data = degrees, geom = 'density', alpha = I(.5)) + 
-     labs(title = 'Degree distributions under different projection methods', x = 'Degree centrality (# of nodes)', y = 'Density') + 
-     scale_fill_discrete(name = 'Projection method', labels = c('Binary', 'Sum', 'Newman', 'None (raw two-mode)')) +
-     scale_color_discrete(name = 'Projection method', labels = c('Binary', 'Sum', 'Newman', 'None (raw two-mode)')) +
-     theme_minimal()
-```
+![](hittite_analysis_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 Network-level degree centrality measures appear to very sensitive to the projection methods used. The raw two-mode and Newman degree distributions are very similar, with more than 40% of the nodes connected to < 2 other nodes. The distributions only diverge when it comes to isolated nodes. This is to be expected. From the link above we see that "the only difference between this method [Newman] and the two-mode degree is single authored papers [i.e. isolates]. These are excluded in the first and included in the second method."
  
@@ -110,17 +97,12 @@ Network-level degree centrality measures appear to very sensitive to the project
 ###Geodesic Distance
 Now let's look at the distribution of shortest path lengths across the weighted one-mode networks derived from each projection method. [Click here for more information](http://toreopsahl.com/tnet/two-mode-networks/shortest-paths/).
 
-```{r}
+
+```r
 distances <- cbind(distance_tm(mode2, projection.method = 'binary') %>% lower.tri.remove %>% c,
                   distance_tm(mode2, projection.method = 'sum') %>% lower.tri.remove %>% c,
                   distance_tm(mode2, projection.method = 'Newman') %>% lower.tri.remove %>% c) %>% melt
 ```
 
-```{r fig.width = 10, fig.height=7, echo = F, warning = F}
-qplot(x = value, fill = factor(Var2), color = factor(Var2), data = distances, geom = 'density', alpha = I(.5)) + 
-     labs(title = 'Geodesic distributions under different projection methods', x = 'Geodesic distance (# of nodes)', y = 'Density') + 
-     scale_fill_discrete(name = 'Projection method', labels = c('Binary', 'Sum', 'Newman')) +
-     scale_color_discrete(name = 'Projection method', labels = c('Binary', 'Sum', 'Newman')) +
-     theme_minimal()
-```
+![](hittite_analysis_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 These three distributions are not directly comparable, as the binary-projected network is unweighted and can only have integer distances. Accounting for this discrepency, there appears to be much more similarity between these distributions than between the degree distributions. Although this may just be an artifact of this particular dataset, the geodesic distribution appears to be more robust to the choice of projection than the degree distribution.

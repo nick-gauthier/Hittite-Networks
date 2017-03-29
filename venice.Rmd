@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Venice Correspondence Network"
 output: 
   html_document: 
     keep_md: yes
@@ -9,50 +9,34 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Venice News Elasticity
-```{r}
-library(raster)
-library(dplyr)
-library(ggplot2)
-```
-
-Import Elasticity Data:
-```{r}
-dat <- read_csv('VeniceNews - Sheet1.csv', stringsAsFactors = F)
-```
-
-
-Import world cities shapefile
-```{r}
-cities <- shapefile('~/GoogleDrive/Data/ne_10m_populated_places_simple.shp') %>% 
-  data.frame %>%
-  filter(name %in% dat$City & longitude > 0 & iso_a2 != 'RO') %>%
-  dplyr::select(name, latitude, longitude) %>%
-  inner_join(dat, by = c('name' = 'City'))#full_join(dat, by = c('name' = 'City'))
-
-ggplot(cities, aes(x = longitude, y = latitude, label = name)) +
-  geom_point() +
-  geom_text()
-```
-
-
-```{r}
-write.csv(cities, 'venice_news.csv')
-```
-```{r}
+```{r message = F, warning=F}
 library(tidyverse)
-dat <- read_csv('venice_news.csv')
-dat
-```
-```{r}
-glimpse(dat)
-```
-```{r}
-library(ggraph)
 library(igraph)
+library(ggraph)
+```
 
-dat <- read_csv('Venice-news.csv')
-glimpse(dat)
-dat %>% graph_from_data_frame
+# Venice News Elasticity
+```{r message = F}
+venice <- read_csv('venice_news.csv')
+glimpse(venice)
+```
+
+```{r}
+venice.net <- venice %>%
+     mutate(From = 'Venice') %>%
+     select(From, City:Ratio) %>%
+     graph_from_data_frame
+venice.net
+```
+venice
+
+```{r}
+ggraph(venice.net) +
+     geom_edge_link() +
+     geom_node_point(aes(size = c(0,venice$WeightedMean))) +
+     geom_node_label(aes(label = name, size = c(0, venice$WeightedMean))) +
+     theme_void() +
+     coord_fixed()
+V(venice.net)
 ```
 
