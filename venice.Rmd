@@ -1,0 +1,58 @@
+---
+title: "Untitled"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Venice News Elasticity
+```{r}
+library(raster)
+library(dplyr)
+library(ggplot2)
+```
+
+Import Elasticity Data:
+```{r}
+dat <- read_csv('VeniceNews - Sheet1.csv', stringsAsFactors = F)
+```
+
+
+Import world cities shapefile
+```{r}
+cities <- shapefile('~/GoogleDrive/Data/ne_10m_populated_places_simple.shp') %>% 
+  data.frame %>%
+  filter(name %in% dat$City & longitude > 0 & iso_a2 != 'RO') %>%
+  dplyr::select(name, latitude, longitude) %>%
+  inner_join(dat, by = c('name' = 'City'))#full_join(dat, by = c('name' = 'City'))
+
+ggplot(cities, aes(x = longitude, y = latitude, label = name)) +
+  geom_point() +
+  geom_text()
+```
+
+
+```{r}
+write.csv(cities, 'venice_news.csv')
+```
+```{r}
+library(tidyverse)
+dat <- read_csv('venice_news.csv')
+dat
+```
+```{r}
+glimpse(dat)
+```
+```{r}
+library(ggraph)
+library(igraph)
+
+dat <- read_csv('Venice-news.csv')
+glimpse(dat)
+dat %>% graph_from_data_frame
+```
+
